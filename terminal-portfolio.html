@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Abdul // Terminal Portfolio</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  :root{
+    --bg:#0a0d0a;
+    --bg-soft:#0e120e;
+    --green:#39ff6a;
+    --green-dim:#1f8a3d;
+    --cyan:#56e8ff;
+    --amber:#ffb454;
+    --red:#ff5c5c;
+    --text-dim:#7a8a7a;
+    --border:#1c2a1c;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html,body{
+    margin:0;
+    padding:0;
+    background:#000;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  }
+
+  body{
+    padding:24px;
+    width:100%;
+  }
+
+  .crt-wrap{
+    width:100%;
+    max-width:920px;
+    margin:0 auto;
+  }
+
+  .window{
+    background:var(--bg);
+    border-radius:10px;
+    border:1px solid var(--border);
+    box-shadow:0 0 0 1px rgba(57,255,106,0.04), 0 30px 80px -20px rgba(0,0,0,0.8), 0 0 60px -10px rgba(57,255,106,0.05);
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    height:600px;
+  }
+
+  .titlebar{
+    background:#101510;
+    border-bottom:1px solid var(--border);
+    padding:10px 14px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    flex-shrink:0;
+    user-select:none;
+  }
+
+  .dots{ display:flex; gap:8px; }
+  .dot{ width:12px; height:12px; border-radius:50%; }
+  .dot.red{ background:#ff5f56; }
+  .dot.yellow{ background:#ffbd2e; }
+  .dot.green{ background:#27c93f; }
+
+  .titlebar-label{
+    flex:1;
+    text-align:center;
+    font-size:12.5px;
+    color:var(--text-dim);
+    letter-spacing:0.3px;
+  }
+
+  .term{
+    flex:1;
+    overflow-y:auto;
+    padding:18px 20px 8px;
+    font-size:14px;
+    line-height:1.65;
+    color:var(--green);
+    background:
+      linear-gradient(rgba(0,0,0,0) 50%, rgba(0,0,0,0.12) 50%) 0 0 / 100% 3px,
+      var(--bg);
+  }
+
+  .term::-webkit-scrollbar{ width:10px; }
+  .term::-webkit-scrollbar-track{ background:transparent; }
+  .term::-webkit-scrollbar-thumb{ background:var(--border); border-radius:6px; }
+
+  .line{ white-space:pre-wrap; word-break:break-word; margin:0 0 2px; }
+  .ascii{ color:var(--green); font-weight:700; white-space:pre; font-size:11px; line-height:1.3; }
+  .sub{ color:var(--text-dim); }
+  .prompt-row{ display:flex; gap:8px; }
+  .ps1{ color:var(--cyan); flex-shrink:0; white-space:pre; }
+  .cmd-echo{ color:#d8ffe0; }
+  .out-cyan{ color:var(--cyan); }
+  .out-amber{ color:var(--amber); }
+  .out-red{ color:var(--red); }
+  .out-dim{ color:var(--text-dim); }
+  .link{ color:var(--cyan); text-decoration:underline; cursor:pointer; }
+  .link:hover{ color:#9ef4ff; }
+  .tag{ color:var(--amber); }
+  .bold{ font-weight:700; }
+
+  .input-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:0 20px 16px;
+    flex-shrink:0;
+    background:var(--bg);
+  }
+  .input-row .ps1{ font-size:14px; }
+  .input-line{
+    flex:1;
+    display:flex;
+    align-items:center;
+    position:relative;
+  }
+  #cmd-input{
+    flex:1;
+    background:transparent;
+    border:none;
+    outline:none;
+    color:#d8ffe0;
+    font-family:inherit;
+    font-size:14px;
+    caret-color:transparent;
+  }
+  .cursor{
+    width:8px;
+    height:16px;
+    background:var(--green);
+    display:inline-block;
+    margin-left:1px;
+    animation:blink 1s steps(1) infinite;
+    flex-shrink:0;
+  }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  .footnote{
+    text-align:center;
+    color:#4a5a4a;
+    font-size:11px;
+    margin-top:10px;
+    letter-spacing:0.3px;
+  }
+
+  /* matrix overlay */
+  #matrix-canvas{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    display:none;
+    z-index:5;
+  }
+  .window{ position:relative; }
+
+  @media (max-width:600px){
+    .window{ height:540px; }
+    .term{ font-size:12.5px; }
+    .ascii{ font-size:8px; }
+    .titlebar-label{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="crt-wrap">
+  <div class="window" id="window">
+    <div class="titlebar">
+      <div class="dots">
+        <div class="dot red"></div>
+        <div class="dot yellow"></div>
+        <div class="dot green"></div>
+      </div>
+      <div class="titlebar-label">abdul@portfolio: ~</div>
+    </div>
+    <canvas id="matrix-canvas"></canvas>
+    <div class="term" id="term"></div>
+    <div class="input-row">
+      <span class="ps1" id="ps1-live">guest@portfolio:~$</span>
+      <div class="input-line">
+        <input id="cmd-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" />
+        <span class="cursor" id="fake-cursor"></span>
+      </div>
+    </div>
+  </div>
+  <div class="footnote">type <span style="color:var(--cyan)">help</span> to see available commands &middot; click the window to focus</div>
+</div>
+
+<script>
+// ---------- CONFIG: swap these placeholders with your real info ----------
+const PROFILE = {
+  name: "ABDUL",
+  role: "Frontend Engineer",
+  bioLines: [
+    "Frontend engineer who likes making interfaces feel alive.",
+    "I build with React, JavaScript and Three.js, and I care about",
+    "the 5% of polish most people skip: motion, feedback, detail.",
+    "Comfortable across the stack, happiest in the browser."
+  ],
+  stack: ["JavaScript", "React", "Three.js", "Tailwind CSS", "Node.js", "Git"],
+  email: "your.email@example.com",
+  linkedin: "https://linkedin.com/in/yourhandle",
+  github: "https://github.com/yourhandle",
+  projects: [
+    {
+      name: "project-one",
+      title: "Project One",
+      desc: "Short punchy description of what it does and the problem it solves.",
+      tech: "React, Node.js, PostgreSQL",
+      link: "https://github.com/yourhandle/project-one"
+    },
+    {
+      name: "project-two",
+      title: "Project Two",
+      desc: "Short punchy description of what it does and the problem it solves.",
+      tech: "Three.js, WebGL, Vite",
+      link: "https://github.com/yourhandle/project-two"
+    },
+    {
+      name: "project-three",
+      title: "Project Three",
+      desc: "Short punchy description of what it does and the problem it solves.",
+      tech: "Next.js, Tailwind, Stripe",
+      link: "https://github.com/yourhandle/project-three"
+    }
+  ]
+};
+// ---------------------------------------------------------------------------
+
+const ASCII_LOGO =
+` █████╗ ██████╗ ██████╗ ██╗   ██╗██╗
+██╔══██╗██╔══██╗██╔══██╗██║   ██║██║
+███████║██████╔╝██║  ██║██║   ██║██║
+██╔══██║██╔══██╗██║  ██║██║   ██║██║
+██║  ██║██████╔╝██████╔╝╚██████╔╝███████╗
+╚═╝  ╚═╝╚═════╝ ╚═════╝  ╚═════╝ ╚══════╝`;
+
+const term = document.getElementById('term');
+const input = document.getElementById('cmd-input');
+const ps1Live = document.getElementById('ps1-live');
+const win = document.getElementById('window');
+const matrixCanvas = document.getElementById('matrix-canvas');
+
+let history = [];
+let histIndex = -1;
+let booted = false;
+
+function scrollBottom(){
+  term.scrollTop = term.scrollHeight;
+}
+
+function appendRaw(html, cls){
+  const div = document.createElement('div');
+  div.className = 'line' + (cls ? ' ' + cls : '');
+  div.innerHTML = html;
+  term.appendChild(div);
+  scrollBottom();
+  return div;
+}
+
+function appendPromptEcho(cmdText){
+  const row = document.createElement('div');
+  row.className = 'line prompt-row';
+  row.innerHTML = `<span class="ps1">guest@portfolio:~$</span><span class="cmd-echo">${escapeHtml(cmdText)}</span>`;
+  term.appendChild(row);
+  scrollBottom();
+}
+
+function escapeHtml(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function typeOut(text, el, speed, cb){
+  let i = 0;
+  el.textContent = '';
+  function step(){
+    if(i <= text.length){
+      el.textContent = text.slice(0, i);
+      i++;
+      scrollBottom();
+      setTimeout(step, speed);
+    } else if(cb){
+      cb();
+    }
+  }
+  step();
+}
+
+function bootSequence(){
+  const asciiDiv = document.createElement('div');
+  asciiDiv.className = 'line ascii';
+  term.appendChild(asciiDiv);
+
+  const lines = ASCII_LOGO.split('\n');
+  let li = 0;
+
+  function typeLine(){
+    if(li >= lines.length){
+      appendRaw(`<span class="sub">${PROFILE.role} &middot; portfolio terminal v1.0</span>`);
+      appendRaw(`<span class="sub">Type '<span class="out-cyan">help</span>' to see available commands.</span>`);
+      appendRaw('');
+      booted = true;
+      input.disabled = false;
+      input.focus();
+      return;
+    }
+    const full = lines[li];
+    let ci = 0;
+    const current = lines.slice(0, li).join('\n') + (li>0 ? '\n' : '');
+    function typeChar(){
+      if(ci <= full.length){
+        asciiDiv.textContent = current + full.slice(0, ci);
+        ci += 3;
+        scrollBottom();
+        setTimeout(typeChar, 4);
+      } else {
+        li++;
+        setTimeout(typeLine, 30);
+      }
+    }
+    typeChar();
+  }
+  typeLine();
+}
+
+// ---------------- COMMANDS ----------------
+
+function cmdHelp(){
+  appendRaw(`<span class="out-cyan bold">Available commands:</span>`);
+  appendRaw(`  <span class="tag">help</span>          show this list`);
+  appendRaw(`  <span class="tag">about</span>         who i am + tech stack`);
+  appendRaw(`  <span class="tag">projects</span>      list featured projects`);
+  appendRaw(`  <span class="tag">contact</span>       email + social links`);
+  appendRaw(`  <span class="tag">clear</span>         wipe the terminal`);
+  appendRaw(`  <span class="out-dim">tip: try 'projects 1', or type a project name directly.</span>`);
+  appendRaw('');
+}
+
+function cmdAbout(){
+  appendRaw(`<span class="out-cyan bold">whoami</span>`);
+  PROFILE.bioLines.forEach(l => appendRaw(l));
+  appendRaw('');
+  appendRaw(`<span class="out-amber">stack:</span> ${PROFILE.stack.join(' &middot; ')}`);
+  appendRaw('');
+}
+
+function cmdProjects(arg){
+  const list = PROFILE.projects;
+  if(!arg){
+    appendRaw(`<span class="out-cyan bold">Featured projects:</span>`);
+    list.forEach((p, idx) => {
+      appendRaw(`  [<span class="out-amber">${idx+1}</span>] <span class="tag">${p.name}</span> &mdash; ${p.title}`);
+    });
+    appendRaw(`<span class="out-dim">type a number or project name for details, e.g. 'projects 1'</span>`);
+    appendRaw('');
+    return;
+  }
+  let p = null;
+  const num = parseInt(arg, 10);
+  if(!isNaN(num) && list[num-1]) p = list[num-1];
+  else p = list.find(x => x.name.toLowerCase() === arg.toLowerCase());
+
+  if(!p){
+    appendRaw(`<span class="out-red">No project matches "${escapeHtml(arg)}". Type 'projects' to see the list.</span>`);
+    appendRaw('');
+    return;
+  }
+  appendRaw(`<span class="out-cyan bold">${p.title}</span>`);
+  appendRaw(p.desc);
+  appendRaw(`<span class="out-amber">tech:</span> ${p.tech}`);
+  appendRaw(`<span class="out-amber">repo:</span> <a class="link" href="${p.link}" target="_blank" rel="noopener">${p.link}</a>`);
+  appendRaw('');
+}
+
+function cmdContact(){
+  appendRaw(`<span class="out-cyan bold">Let's connect:</span>`);
+  appendRaw(`  email     <a class="link" href="mailto:${PROFILE.email}">${PROFILE.email}</a>`);
+  appendRaw(`  linkedin  <a class="link" href="${PROFILE.linkedin}" target="_blank" rel="noopener">${PROFILE.linkedin}</a>`);
+  appendRaw(`  github    <a class="link" href="${PROFILE.github}" target="_blank" rel="noopener">${PROFILE.github}</a>`);
+  appendRaw('');
+}
+
+function cmdClear(){
+  term.innerHTML = '';
+}
+
+function cmdSudo(){
+  appendRaw(`<span class="out-red bold">Permission denied: nice try.</span>`);
+  appendRaw(`<span class="out-dim">This terminal believes in least privilege. So do I.</span>`);
+  appendRaw('');
+}
+
+function cmdUnknown(raw){
+  appendRaw(`<span class="out-red">command not found: ${escapeHtml(raw)}</span>`);
+  appendRaw(`<span class="out-dim">type 'help' for a list of commands</span>`);
+  appendRaw('');
+}
+
+// ---------------- MATRIX RAIN ----------------
+let matrixRunning = false;
+let matrixRAF = null;
+
+function startMatrix(){
+  matrixRunning = true;
+  matrixCanvas.style.display = 'block';
+  const ctx = matrixCanvas.getContext('2d');
+  const resize = () => {
+    matrixCanvas.width = win.clientWidth;
+    matrixCanvas.height = win.clientHeight;
+  };
+  resize();
+  const cols = Math.floor(matrixCanvas.width / 14);
+  const drops = new Array(cols).fill(0);
+  const chars = "01アイウエオカキクケコサシスセソ";
+
+  function draw(){
+    ctx.fillStyle = 'rgba(10,13,10,0.08)';
+    ctx.fillRect(0,0,matrixCanvas.width, matrixCanvas.height);
+    ctx.fillStyle = '#39ff6a';
+    ctx.font = '14px monospace';
+    for(let i=0;i<drops.length;i++){
+      const text = chars[Math.floor(Math.random()*chars.length)];
+      ctx.fillText(text, i*14, drops[i]*14);
+      if(drops[i]*14 > matrixCanvas.height && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    }
+    if(matrixRunning) matrixRAF = requestAnimationFrame(draw);
+  }
+  draw();
+
+  setTimeout(stopMatrix, 4000);
+}
+
+function stopMatrix(){
+  matrixRunning = false;
+  if(matrixRAF) cancelAnimationFrame(matrixRAF);
+  matrixCanvas.style.display = 'none';
+  const ctx = matrixCanvas.getContext('2d');
+  ctx.clearRect(0,0,matrixCanvas.width, matrixCanvas.height);
+}
+
+function cmdMatrix(){
+  appendRaw(`<span class="out-cyan">Wake up...</span>`);
+  startMatrix();
+}
+
+// ---------------- DISPATCH ----------------
+
+function runCommand(raw){
+  const trimmed = raw.trim();
+  appendPromptEcho(raw);
+  if(trimmed === ''){
+    return;
+  }
+  history.push(raw);
+  histIndex = history.length;
+
+  const parts = trimmed.split(/\s+/);
+  const base = parts[0].toLowerCase();
+  const arg = parts.slice(1).join(' ');
+
+  if(base === 'sudo' || trimmed.toLowerCase().includes('rm -rf')){
+    cmdSudo();
+    return;
+  }
+
+  switch(base){
+    case 'help': cmdHelp(); break;
+    case 'about': case 'whoami': cmdAbout(); break;
+    case 'projects': case 'project': cmdProjects(arg); break;
+    case 'contact': case 'linkedin': cmdContact(); break;
+    case 'clear': case 'cls': cmdClear(); break;
+    case 'matrix': cmdMatrix(); break;
+    default:
+      // also allow typing a project name directly, e.g. "project-one"
+      const matchedProject = PROFILE.projects.find(p => p.name.toLowerCase() === base);
+      if(matchedProject){
+        cmdProjects(base);
+      } else {
+        cmdUnknown(raw);
+      }
+  }
+}
+
+input.addEventListener('keydown', (e) => {
+  if(e.key === 'Enter'){
+    const val = input.value;
+    input.value = '';
+    runCommand(val);
+  } else if(e.key === 'ArrowUp'){
+    e.preventDefault();
+    if(history.length === 0) return;
+    histIndex = Math.max(0, histIndex - 1);
+    input.value = history[histIndex] || '';
+  } else if(e.key === 'ArrowDown'){
+    e.preventDefault();
+    if(history.length === 0) return;
+    histIndex = Math.min(history.length, histIndex + 1);
+    input.value = history[histIndex] || '';
+  }
+});
+
+win.addEventListener('click', () => input.focus());
+input.disabled = true;
+
+bootSequence();
+</script>
+
+</body>
+</html>
